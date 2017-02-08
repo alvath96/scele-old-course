@@ -1,14 +1,11 @@
-console.log('haha1');
 $(document).ready(function() {
-	console.log('haha2');
 	var course_base_link = 'https://scele.cs.ui.ac.id/course/view.php?id=';
 	var courses = null;
 	var show_old = false;
 	var $my_course = $('#inst25 > .content');
 	var npmText = $('.usertext').text().match(/\d{10}/g);
 	var npm = npmText != null && npmText.length > 0 ? npmText[0] : null;
-	console.log(npm);
-
+	
 	function saveData() {
 		if (npm) {
 			localStorage.setItem(npm, JSON.stringify(courses));
@@ -94,7 +91,6 @@ $(document).ready(function() {
 			html = '<ul id="oldlist" class="unlist">';
 
 			$.each(courses.old, function (index, course) {
-				console.log(course);
 				html += '<li><div class="course column c1">'
 						+ '<img src="https://scele.cs.ui.ac.id/theme/image.php/lambda/core/1472119013/i/course" class="icon" alt="">'
 						+ '<a href="' + course_base_link + course.id + '">' + course.name + '</a>'
