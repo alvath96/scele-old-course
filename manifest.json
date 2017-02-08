@@ -1,0 +1,17 @@
+{
+  "manifest_version": 2,
+
+  "name": "Scele Old Course",
+  "description": "Let students archive old courses",
+  "version": "1",
+
+  "permissions":[
+  	"tabs", "https://www.scele.cs.ui.ac.id/*"
+  ],
+  "content_scripts": [
+	  {
+	    "matches": ["https://scele.cs.ui.ac.id/*"],
+	    "js": ["jquery.js", "old-course.js"]
+	  }
+  ]
+}
