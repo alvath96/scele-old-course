@@ -1,135 +1,68 @@
-$(document).ready(function() {
-	var course_base_link = 'https://scele.cs.ui.ac.id/course/view.php?id=';
-	var courses = null;
-	var show_old = false;
-	var $my_course = $('#inst25 > .content');
-	var npmText = $('.usertext').text().match(/\d{10}/g);
-	var npm = npmText != null && npmText.length > 0 ? npmText[0] : null;
-	
-	function saveData() {
-		if (npm) {
-			localStorage.setItem(npm, JSON.stringify(courses));
-		}
-	}
+'use strict';
 
-	function getLocalData() {
-		if (npm) {
-			return JSON.parse(localStorage.getItem(npm));
-		}
-	}
-
-	function getCourseData() {
-		courses = {};
-		
-		course_new = {};
-		$course_list = $my_course.children('ul').children('li');
-		$course_list.each(function () {
-			$link = $(this).children('div').children('a');
-			var id = "" + $link.attr('href').match(/id=([^&]+)/)[1];
-			course_new["i" + id] = {
-				'id': id,
-				'name': $link.text(),
+$(window).load(function() {
+	function parse(data, archived) {
+		return $.map(data, function (link, key) {
+			return {
+				href: $(link).attr('href'),
+				text: $(link).text(),
+				archived: archived
 			};
 		});
-
-		courses['new'] = course_new;
-		courses['old'] = {};
-
-		saveData();
-		return courses;
 	}
 
-	function modifyMyCourses() {
-		// check if "My Courses" board exists
-		if (npm == null || $('#inst25 > .header > div > h2').text() != "My courses") {
-			return;
-		}
+	var all_courses = $('#inst25 > div > ul > li > div > a');
+	// all courses, default is hidden (later will be filtered with "enrolled courses")
+	var all = parse(all_courses, false);
 
-		$my_course.children('ul').remove();
+	function changeDisplay(courses) {
+		var $nav = $('.nav > li:nth-last-child(1)').children('ul').empty();
+		var $inst25 = $('#inst25 > div > ul').empty();
 
-		html = '<ul class="unlist">';
-		$.each(courses.new, function (index, course) {
-			html += '<li><div class="course column c1">'
-					+ '<img src="https://scele.cs.ui.ac.id/theme/image.php/lambda/core/1472119013/i/course" class="icon" alt="">'
-					+ '<a href="' + course_base_link + course.id + '">' + course.name + '</a>'
-					+ ' <a href="#" class="mark-old" title="mark as old course" data-id="' + course.id +'">o</a>'
-					+ '</div></li>';
+		$.each(courses, function (key) {
+			// append to navbar
+			$nav.append('<li><a href="' + this.href + '">' + this.text + '</a></li>');
 			
-		});
-		if (Object.keys(courses.old).length > 0) {
-			html += '<div id="old"><a id="btn-old-course" href="#">Show old courses</a></div>';
-		}
+			// append to "my courses"
+			$inst25.append('<li class="' + (this.archived ? 'enrolled' : 'archived hidden') +'"><div class="column c1"><a href="' + this.href + '">'
+							+ '<img src="https://scele.cs.ui.ac.id/theme/image.php/lambda/core/1472119013/i/course" class="icon" alt="" />' 
+							+ this.text + '</a></div></li>');
 
-		html += '</ul>';
+			// if next course is archived
+			if (courses[key].archived && !courses[key + 1].archived) {
+				$nav.append('<span style="padding:10px;">Archieved Courses</span>');
+				
+				$inst25.append('<li><div class="column c1" style="float:left"><a href="#" id="btn_display">Show/Hide courses</a>');
+				$inst25.append('<span style="float:right"><a href="https://scele.cs.ui.ac.id/blocks/my_enrolled_courses/showhide.php?contextid=16984" title="Settings">'
+								+ '<img class="iconsmall actionmenu" alt="" src="https://scele.cs.ui.ac.id/theme/image.php/lambda/core/1472119013/t/edit" />'
+								+ '</a></span></div></li><br />');
 
-		$my_course.prepend(html);
-		displayOldCourse();
-
-		$("#btn-old-course").click(function(e) {
-			e.preventDefault();
-			show_old = !show_old;
-			displayOldCourse();
-			saveData();
-		});
-
-		$(".mark-old").click(function (e) {
-			e.preventDefault();
-			var id = $(this).attr('data-id');
-			course = courses.new["i" + id];
-			delete courses.new["i" + id];
-			courses.old["i" + id] = course;
-			modifyMyCourses();
-			saveData();
+				$('#btn_display').click(function (e) {
+					e.preventDefault();
+					if ($('.archived:nth(1)').hasClass('hidden')) $('.archived').removeClass('hidden');
+					else $('.archived').addClass('hidden');
+				});
+			}
 		});
 	}
 
-	function displayOldCourse() {
-		if (!show_old) {
-			$('#oldlist').remove();
-			$('#btn-old-course').text('Show old course');
-		} else {
-			html = '<ul id="oldlist" class="unlist">';
+	if ($('#block-login').length == 0) {
+		$.ajax({
+			url: 'https://scele.cs.ui.ac.id/my'
+		}).done(function($data) {
+			var enrolled_courses = $($data).find('#course_list_in_block > li > div > a');
 
-			$.each(courses.old, function (index, course) {
-				html += '<li><div class="course column c1">'
-						+ '<img src="https://scele.cs.ui.ac.id/theme/image.php/lambda/core/1472119013/i/course" class="icon" alt="">'
-						+ '<a href="' + course_base_link + course.id + '">' + course.name + '</a>'
-						+ ' <a href="#" class="mark-new" title="mark as new course" data-id="' + course.id + '">n</a>'
-						+ '</div></li>';
-			});
+			if (enrolled_courses.length > 0) {
+				var shown = parse(enrolled_courses, true);
+				var hrefs = $.map(shown, function (val, key) { return val.href; });
 
-			html += '</ul>';
+				var hidden = all.filter(function(val, key) {
+					return (hrefs.indexOf(val.href) == -1);
+				});
 
-			$("#old").append(html);
-			$('#btn-old-course').text('Hide old course');
-
-			$(".mark-new").click(function (e) {
-				e.preventDefault();
-				var id = $(this).attr('data-id');
-				course = courses.old["i" + id];
-				delete courses.old["i" + id];
-				courses.new["i" + id] = course;
-				modifyMyCourses();
-				saveData();
-			});
-		}
-	}
-
-	courses = getLocalData();
-	if (courses == null || courses == undefined) {
-		getCourseData();
-	}
-
-	if (npm) {
-		$navs = $('.nav > li');
-		$my_course_nav = $navs[$navs.length - 2];
-		$nav_courses = $($my_course_nav).children('ul').children('li');
-		
-		$nav_courses.each(function() {
-			$link = $(this).children('a');
-			$link.text($link.attr('title'));
+				var courses = shown.concat(hidden);
+				changeDisplay(courses);
+			}
 		});
 	}
-
-	modifyMyCourses();
 });
