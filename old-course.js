@@ -1,6 +1,6 @@
 'use strict';
 
-$(window).load(function() {
+$(document).ready(function() {
 	function parse(data, archived) {
 		return $.map(data, function (link, key) {
 			return {
